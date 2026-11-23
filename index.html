@@ -1,0 +1,910 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Zombie City: Supply Rush</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#0b1220;color:#e5e7eb;font-family:Arial,sans-serif;text-align:center}
+h1{margin:14px 0 5px;color:#facc15;letter-spacing:2px;text-shadow:0 0 14px #f59e0b}
+#help{margin:7px auto 10px;max-width:1000px;color:#cbd5e1;font-size:14px}
+canvas{width:min(96vw,1000px);height:auto;border:3px solid #64748b;border-radius:10px;background:#80c9ee;box-shadow:0 0 28px #0ea5e955;image-rendering:pixelated}
+#hud{max-width:1000px;margin:9px auto;padding:10px;background:#172033;border:1px solid #334155;border-radius:10px;font-weight:bold}
+button{padding:11px 18px;margin:5px;border:0;border-radius:8px;background:#2563eb;color:white;cursor:pointer;font-weight:bold}
+button:hover{background:#1d4ed8}
+#shopPanel{display:none;max-width:520px;margin:10px auto;padding:14px;background:#172033;border:2px solid #facc15;border-radius:12px}
+#shopPanel button{background:#a16207}
+#shopPanel button:hover{background:#854d0e}
+.small{font-size:12px;color:#94a3b8}
+</style>
+<style>
+/* Mobile-friendly layout and touch controls */
+html,body{width:100%;min-height:100%;overflow-x:hidden;touch-action:pan-y}
+button{touch-action:manipulation}
+#mobileControls{display:none;max-width:1000px;margin:10px auto 18px;padding:10px;background:#101b2e;border:2px solid #38bdf8;border-radius:14px;gap:10px;align-items:center;justify-content:space-between;user-select:none;-webkit-user-select:none}
+#mobileControls .touchGroup{display:flex;gap:8px;align-items:center}
+#mobileControls button{min-width:58px;min-height:58px;margin:0;padding:8px;font-size:15px;border-radius:14px;background:#334155;border:2px solid #64748b;box-shadow:0 3px 0 #0f172a}
+#mobileControls button.action{background:#1d4ed8}
+#mobileControls button:active,#mobileControls button.pressed{transform:translateY(2px);background:#0e7490}
+@media (pointer:coarse), (max-width:700px){
+ body{padding:0 6px}
+ h1{font-size:clamp(19px,5vw,28px);letter-spacing:1px}
+ #help{font-size:12px;padding:0 5px}
+ #onlinePanel,#hud,#keybindPanel,#shopPanel{width:100%;max-width:100%;padding:9px}
+ #onlinePanel button{font-size:12px;padding:10px 9px}
+ #onlinePanel input{width:115px;max-width:32vw}
+ canvas{display:block;width:100%;height:auto;max-width:100%;border-width:2px;border-radius:7px}
+ #mobileControls{display:flex}
+ #mobileControls .touchGroup{gap:6px}
+ #mobileControls button{min-width:clamp(46px,13vw,64px);min-height:54px;font-size:13px}
+ body>button{font-size:12px;padding:10px 9px;margin:3px}
+ body>p.small{font-size:11px;line-height:1.45}
+}
+@media (orientation:landscape) and (max-height:520px){
+ h1{margin:4px 0;font-size:18px}
+ #help{display:none}
+ #onlinePanel{margin:4px auto;padding:5px}
+ #onlinePanel .onlineNote{display:none}
+ canvas{max-height:55vh;width:auto;max-width:98vw}
+ #mobileControls{margin:4px auto;padding:5px}
+ #mobileControls button{min-height:44px}
+}
+</style>
+
+<style>
+#onlinePanel{max-width:900px;text-align:left;box-shadow:0 12px 40px #02061788}
+.lobbyTop{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.lobbyBrand{font-size:20px;color:#67e8f9;font-weight:900;letter-spacing:1px}
+.lobbyActions{display:flex;gap:7px;flex-wrap:wrap}
+.lobbyActions button{margin:2px}
+.lobbyCreate{display:grid;grid-template-columns:minmax(120px,1fr) auto;gap:8px;margin:12px 0}
+#lobbyName{width:100%;min-width:0;padding:12px;border-radius:8px;border:1px solid #475569;background:#0b1220;color:white}
+.lobbySection{margin-top:14px;padding-top:12px;border-top:1px solid #334155}
+.lobbySectionHead{display:flex;align-items:center;justify-content:space-between;gap:8px}
+#lobbyList{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:9px;margin-top:10px}
+.lobbyCard{background:#172554;border:1px solid #3b82f6;border-radius:10px;padding:12px;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.lobbyCard strong{display:block;color:#f8fafc}
+.lobbyMeta{font-size:12px;color:#bfdbfe;margin-top:4px}
+.lobbyCard button{margin:0;padding:9px 12px;white-space:nowrap}
+.lobbyEmpty{grid-column:1/-1;color:#94a3b8;text-align:center;padding:18px;border:1px dashed #475569;border-radius:10px}
+#onlineRoomCode{width:130px!important}
+@media(max-width:600px){
+ #onlinePanel{padding:10px;margin:8px auto}
+ .lobbyBrand{font-size:16px}
+ .lobbyCreate{grid-template-columns:1fr}
+ #lobbyList{grid-template-columns:1fr}
+ .lobbyCard{padding:10px}
+}
+</style>
+
+</head>
+<body>
+<h1>☣ ZOMBIE CITY: SUPPLY RUSH</h1>
+<p id="help">Choose PLAY OFFLINE for a solo/local game, or create/join an online room. Online supports up to 4 connected players.</p>
+
+<style>
+#onlinePanel{max-width:760px;margin:12px auto;padding:14px;background:#101b2e;border:2px solid #22d3ee;border-radius:12px}
+#onlinePanel input{padding:10px;border-radius:7px;border:1px solid #64748b;background:#0b1220;color:#fff;width:140px;text-transform:uppercase}
+#onlineStatus{font-weight:bold;color:#fbbf24}
+#onlinePlayers{color:#cbd5e1;font-size:13px;margin-top:7px}
+.onlineNote{font-size:12px;color:#94a3b8}
+</style>
+<div id="onlinePanel">
+ <div class="lobbyTop">
+  <div class="lobbyBrand">☣ ZOMBIE CITY — PLAY ONLINE</div>
+  <div class="lobbyActions">
+   <button onclick="playOffline()" style="background:#15803d">PLAY OFFLINE</button>
+   <button onclick="onlineLeaveRoom()">LEAVE ROOM</button>
+  </div>
+ </div>
+ <div class="lobbyCreate">
+  <input id="lobbyName" maxlength="18" placeholder="Your player name" value="Survivor">
+  <button onclick="onlineCreateRoom()">＋ CREATE LOBBY</button>
+ </div>
+ <div id="onlineStatus">Connecting status will appear here. Select a lobby to join instantly.</div>
+ <div class="lobbySection">
+  <div class="lobbySectionHead">
+   <strong>🌐 PUBLIC LOBBIES</strong>
+   <button onclick="onlineRefreshRooms()">↻ REFRESH</button>
+  </div>
+  <div id="lobbyList"><div class="lobbyEmpty">Loading available lobbies…</div></div>
+ </div>
+ <div class="lobbySection">
+  <strong>🔒 JOIN WITH ROOM CODE</strong>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+   <input id="onlineRoomCode" maxlength="6" placeholder="ROOM CODE">
+   <button onclick="onlineJoinRoom()">JOIN ROOM</button>
+  </div>
+ </div>
+ <div id="onlinePlayers"></div>
+ <p class="onlineNote">Choose any public lobby and tap JOIN. Create a lobby to host a new game. Up to 4 players per lobby. The Node.js server must be running and publicly hosted for friends outside your network.</p>
+</div>
+
+<canvas id="game" width="1000" height="550"></canvas>
+
+<div id="mobileControls" aria-label="Touch game controls">
+ <div class="touchGroup">
+  <button type="button" data-hold="a" aria-label="Move left">◀</button>
+  <button type="button" data-hold="d" aria-label="Move right">▶</button>
+ </div>
+ <div class="touchGroup">
+  <button type="button" data-action="jump">JUMP</button>
+  <button type="button" class="action" data-action="shoot">FIRE</button>
+  <button type="button" data-action="pickup">PICK</button>
+  <button type="button" data-action="weapon">GUN</button>
+ </div>
+</div>
+
+<div id="hud">❤️ 100 | 🔫 30 | 🧟 14 | ⭐ 0</div>
+<button onclick="restart()">RESTART</button>
+<button onclick="togglePause()">PAUSE</button>
+<button id="soundBtn" onclick="toggleSound()">SOUND: ON</button>
+<button onclick="toggleShop()">🛒 SHOP</button>
+<button id="modeBtn" onclick="toggleTwoPlayer()">CO-OP PLAYERS: 1</button>
+<button onclick="buildItem('wall')">🧱 BUILD WALL (8 WOOD)</button><button onclick="buildItem('turret')">🛡️ BUILD AUTO TURRET (12 METAL + 5 FUEL)</button><button onclick="buildItem('trap')">🪤 BUILD BARRICADE (5 WOOD + 3 METAL)</button><button onclick="buildItem('storage')">📦 STORAGE (12 WOOD + 6 METAL)</button><button onclick="buildItem('reinforced')">🧱 REINFORCED WALL (10 WOOD + 10 METAL)</button><button onclick="buildItem('sniper')">🎯 SNIPER TURRET (20 METAL + 8 FUEL)</button><button onclick="buildItem('repair')">🔧 REPAIR STATION (10 METAL + 5 FUEL)</button><button onclick="storeResources()">📥 STORE RESOURCES</button><button onclick="withdrawResources()">📤 WITHDRAW RESOURCES</button>
+<button onclick="takeOverBot(0)">JOIN AS MIA</button><button onclick="takeOverBot(1)">JOIN AS NOAH</button><button onclick="takeOverBot(2)">JOIN AS ZARA</button>
+<button onclick="toggleKeybinds()">⌨️ KEYBINDS</button>
+<div id="keybindPanel" style="display:none;max-width:760px;margin:10px auto;padding:14px;background:#172033;border:2px solid #38bdf8;border-radius:12px;text-align:left">
+ <strong>⌨️ CUSTOM CONTROLS</strong>
+ <p class="small">Click a control, then press the key you want. Avoid assigning the same key to two actions.</p>
+ <div id="keybindRows"></div>
+ <button onclick="resetKeybinds()">RESET DEFAULTS</button>
+ <button onclick="toggleKeybinds()">CLOSE</button>
+ <p id="bindStatus" class="small">Choose any control to rebind it.</p>
+</div>
+<div id="shopPanel">
+ <strong>🏪 SURVIVOR TRADING POST</strong>
+ <p class="small">Buy supplies with points, or sell gathered resources for points.</p>
+ <div style="border-top:1px solid #475569;margin:10px 0;padding-top:10px"><strong>💰 SELL YOUR RESOURCES</strong><br>
+ <button onclick="sellItem('wood')">SELL 5 WOOD — 25 points</button>
+ <button onclick="sellItem('metal')">SELL 5 METAL — 40 points</button>
+ <button onclick="sellItem('fuel')">SELL 2 FUEL — 30 points</button>
+ <button onclick="sellAmmo()">SELL 10 AMMO — 20 points</button></div>
+ <button onclick="buyItem('medkit')">MEDKIT — 150 points</button>
+ <button onclick="buyItem('ammo')">AMMO +30 — 100 points</button>
+ <button onclick="buyItem('upgrade')">WEAPON UPGRADE — 300 points</button>
+ <button onclick="toggleShop()">CLOSE</button>
+</div>
+<p class="small">P1: A/D/W/J • P2: arrows/ENTER • P3: C/V/B/N • P4: 4/6/8/0. Mia, Noah and Zara are available as AI teammates from the start. Join as them to take over their character. Build pieces snap to a 48px base grid.</p>
+
+<script>
+const canvas=document.getElementById("game"),ctx=canvas.getContext("2d");
+const W=canvas.width,H=canvas.height,worldWidth=12000;
+const keys={};
+// Declared before the game loop so the first frame can safely check online mode.
+var onlineActive=false,onlineSlot=-1;
+let audioCtx=null,soundOn=true;
+function ensureAudio(){
+ if(!soundOn)return;
+ try{if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)();if(audioCtx.state==="suspended")audioCtx.resume()}catch(e){}
+}
+function tone(freq=440,duration=.08,type="square",volume=.035,slide=0){
+ if(!soundOn)return;ensureAudio();if(!audioCtx)return;
+ const o=audioCtx.createOscillator(),g=audioCtx.createGain(),now=audioCtx.currentTime;
+ o.type=type;o.frequency.setValueAtTime(freq,now);
+ if(slide)o.frequency.exponentialRampToValueAtTime(Math.max(35,freq+slide),now+duration);
+ g.gain.setValueAtTime(volume,now);g.gain.exponentialRampToValueAtTime(.001,now+duration);
+ o.connect(g);g.connect(audioCtx.destination);o.start(now);o.stop(now+duration);
+}
+function sfx(name){
+ if(!soundOn)return;
+ if(name==="shoot"){tone(180,.07,"sawtooth",.045,-90);tone(720,.035,"square",.018,-300)}
+ if(name==="jump")tone(260,.12,"triangle",.035,260);
+ if(name==="hit")tone(110,.16,"sawtooth",.05,-65);
+ if(name==="kill")tone(520,.12,"triangle",.04,380);
+ if(name==="supply"){tone(440,.1,"sine",.045,180);setTimeout(()=>tone(660,.13,"sine",.04,220),90)}
+ if(name==="drop")tone(170,.28,"triangle",.035,-100);
+}
+function toggleSound(){
+ soundOn=!soundOn;
+ document.getElementById("soundBtn").textContent="SOUND: "+(soundOn?"ON":"OFF");
+ if(soundOn){ensureAudio();tone(600,.08,"sine",.025,100)}
+} 
+let state="playing",camera=0,frame=0,score=0,ammo=30,health=100,cooldown=0,shake=0;
+let wave=1,weaponLevel=1,fireRate=16,supplyMessage="",messageTimer=0;
+let rescuedCount=0,twoPlayer=false,playerCount=1;
+let night=false,dayClock=0,bloodMoon=false,eventTimer=0,eventName="",buildingsPlaced=[],baseStructures=[];
+let teamBots=[],bandits=[],banditCamps=[],stolenLoot=0;
+let storage={wood:0,metal:0,fuel:0,capacity:240};
+let indoors=false,insideBuilding=null,outsidePositions=null;
+let resources={wood:0,metal:0,fuel:0};
+const weapons=[
+ {name:"PISTOL",rate:16,damage:1,pellets:1,speed:13},
+ {name:"SHOTGUN",rate:34,damage:1,pellets:5,speed:10},
+ {name:"RIFLE",rate:7,damage:1,pellets:1,speed:17},
+ {name:"HEAVY BLASTER",rate:25,damage:3,pellets:1,speed:11}
+];
+const roomLoot=[];
+const player={x:100,y:426,w:34,h:64,vx:0,vy:0,speed:4.4,grounded:true,facing:1,invincible:0,anim:0,health:100,ammo:30,cooldown:0,weapon:0};
+const player2={x:55,y:426,w:34,h:64,vx:0,vy:0,speed:4.4,grounded:true,facing:1,invincible:0,anim:0,health:100,ammo:30,cooldown:0,weapon:0};
+const player3={...player2,x:145,y:426,health:100,ammo:30};
+const player4={...player2,x:190,y:426,health:100,ammo:30};
+const playerSlots=[player,player2,player3,player4];
+// Only the main ground remains; the floating platforms have been removed.
+const platforms=[{x:0,y:490,w:worldWidth,h:100}];
+const zombies=[],bullets=[],buildings=[],particles=[],supplies=[];
+for(let i=0;i<70;i++)buildings.push({x:i*165+25,w:82+(i%3)*24,h:115+(i*41)%170,type:i%6});
+for(let i=0;i<9;i++)banditCamps.push({x:900+i*1180,w:150});
+function createTeam(){
+ teamBots=[
+  {x:player.x-48,y:426,w:34,h:64,vx:0,vy:0,facing:1,health:100,ammo:40,cooldown:0,weapon:2,anim:0,invincible:0,name:"Mia",role:"MEDIC",shirt:"#2563eb",skillTimer:0,controlled:false},
+  {x:player.x-92,y:426,w:34,h:64,vx:0,vy:0,facing:1,health:100,ammo:50,cooldown:0,weapon:1,anim:0,invincible:0,name:"Noah",role:"GUARD",shirt:"#b45309",skillTimer:0,controlled:false},
+  {x:player.x-136,y:426,w:34,h:64,vx:0,vy:0,facing:1,health:100,ammo:35,cooldown:0,weapon:0,anim:0,invincible:0,name:"Zara",role:"SCAVENGER",shirt:"#9333ea",skillTimer:0,controlled:false}
+ ];
+
+ bandits=[];for(let i=0;i<12;i++)bandits.push({x:650+i*610,y:426,w:34,h:64,hp:4,alive:true,speed:.8+Math.random()*.35,attack:0,loot:0,anim:0,nightRaider:i>=7});
+}
+createTeam();
+function spawnWave(){
+ const start=520+(wave-1)*170;
+ for(let i=0;i<7+wave*2;i++){
+  const x=start+i*(135+Math.random()*45);
+  if(x<worldWidth-80)zombies.push({x,y:426,w:38,h:64,hp:3+Math.floor((wave-1)/2),maxHp:3+Math.floor((wave-1)/2),alive:true,speed:.65+Math.random()*.35+wave*.04,facing:-1,anim:0,attackCooldown:0,kind:i%5===4?"runner":"walker"});
+ }
+}
+spawnWave();
+let nextSupplyAt=frame+500;
+
+function setMessage(s){supplyMessage=s;messageTimer=170}
+function makeBurst(x,y,color,count=12){
+ for(let i=0;i<count;i++){const a=Math.random()*Math.PI*2,sp=1+Math.random()*4;particles.push({x,y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp-1,life:25+Math.random()*20,color,size:2+Math.random()*4})}
+}
+function dropSupply(){
+ sfx("drop");
+ const x=Math.min(worldWidth-100,Math.max(player.x+280, camera+500+Math.random()*350));
+ const type=["ammo","medkit","upgrade"][Math.floor(Math.random()*3)];
+ supplies.push({x,y:-45,groundY:426,type,landed:false,bob:Math.random()*6,glow:0});
+ setMessage("📦 SUPPLY DROP INCOMING! Find the glowing crate!");
+}
+function toggleShop(){
+ const panel=document.getElementById("shopPanel");
+ panel.style.display=panel.style.display==="block"?"none":"block";
+}
+function buyItem(type){
+ if(type==="medkit"){
+  if(score<150){setMessage("Not enough points for a medkit!");return}
+  if((twoPlayer?Math.min(player.health,player2.health):player.health)>=100){setMessage("Your health is already full!");return}
+  score-=150;const mh=twoPlayer?(player.health<=player2.health?player:player2):player;mh.health=Math.min(100,mh.health+45);setMessage("SHOP: Medkit purchased!");
+ }else if(type==="ammo"){
+  if(score<100){setMessage("Not enough points for ammo!");return}
+  score-=100;const ah=twoPlayer?(player.ammo<=player2.ammo?player:player2):player;ah.ammo=Math.min(99,ah.ammo+30);setMessage("SHOP: +30 ammo purchased!");
+ }else if(type==="upgrade"){
+  if(score<300){setMessage("Not enough points for an upgrade!");return}
+  score-=300;weaponLevel++;fireRate=Math.max(6,fireRate-3);setMessage("SHOP: Weapon upgraded!");
+ }
+ sfx("supply");updateHUD();
+}
+function sellItem(type){
+ const deals={wood:{amount:5,payout:25},metal:{amount:5,payout:40},fuel:{amount:2,payout:30}};
+ const deal=deals[type];
+ if(!deal)return;
+ if(resources[type]<deal.amount){setMessage(`Not enough ${type.toUpperCase()}! Need ${deal.amount}.`);return}
+ resources[type]-=deal.amount;score+=deal.payout;
+ setMessage(`SOLD ${deal.amount} ${type.toUpperCase()} for ${deal.payout} points!`);
+ sfx("supply");updateHUD();
+}
+function sellAmmo(){
+ const seller=twoPlayer?(player.ammo>=player2.ammo?player:player2):player;
+ if(seller.ammo<10){setMessage("Not enough ammo! Need 10.");return}
+ seller.ammo-=10;score+=20;setMessage("SOLD 10 AMMO for 20 points!");sfx("supply");updateHUD();
+}
+function toggleTwoPlayer(){
+ playerCount=Math.max(2,playerCount);twoPlayer=true;
+ document.getElementById("modeBtn").textContent="CO-OP PLAYERS: "+playerCount;
+ setMessage("P2 slot enabled. Join Mia, Noah or Zara to fill the other slots.");updateHUD();
+}
+function takeOverBot(index){
+ const b=teamBots[index];if(!b)return;
+ if(b.controlled){setMessage(b.name+" is already controlled.");return}
+ const slot=playerCount,actor=playerSlots[slot];
+ if(slot>3){setMessage("All four player slots are full!");return}
+ Object.assign(actor,{x:b.x,y:b.y,health:b.health,ammo:b.ammo,weapon:b.weapon,shirt:b.shirt,name:b.name,vx:0,vy:0,grounded:true,invincible:0,anim:0,cooldown:0,facing:b.facing||1});
+ b.controlled=true;b.playerSlot=slot;playerCount=Math.max(playerCount,slot+1);twoPlayer=playerCount>1;
+ document.getElementById("modeBtn").textContent="CO-OP PLAYERS: "+playerCount;
+ setMessage("Player "+(slot+1)+" took over "+b.name+"! Same character and special ability retained.");updateHUD();
+}
+function restart(){
+ player.x=100;player.y=426;player.vx=0;player.vy=0;player.grounded=true;player.facing=1;player.invincible=0;player.anim=0;player.health=100;player.ammo=30;player.cooldown=0;player.weapon=0;
+ player2.x=55;player2.y=426;player2.vx=0;player2.vy=0;player2.grounded=true;player2.facing=1;player2.invincible=0;player2.anim=0;player2.health=100;player2.ammo=30;player2.cooldown=0;player2.weapon=0;
+ player3.x=145;player3.y=426;player3.vy=0;player3.grounded=true;player3.health=100;player3.ammo=30;player3.vx=0;player3.vy=0;player4.x=190;player4.y=426;player4.vy=0;player4.grounded=true;player4.health=100;player4.ammo=30;player4.vx=0;player4.vy=0;playerCount=1;twoPlayer=false;document.getElementById("modeBtn").textContent="CO-OP PLAYERS: 1";dayClock=0;night=false;bloodMoon=false;eventTimer=0;buildingsPlaced=[];baseStructures=[];
+ health=100;ammo=30;score=0;camera=0;cooldown=0;shake=0;wave=1;weaponLevel=1;fireRate=16;rescuedCount=0;resources={wood:0,metal:0,fuel:0};roomLoot.length=0;indoors=false;insideBuilding=null;outsidePositions=null;
+ createTeam();stolenLoot=0;storage={wood:0,metal:0,fuel:0,capacity:240};
+ document.getElementById("shopPanel").style.display="none";
+ bullets.length=0;particles.length=0;supplies.length=0;zombies.length=0;spawnWave();nextSupplyAt=frame+500;state="playing";setMessage("Good luck, survivor!");
+}
+function togglePause(){if(state==="playing")state="paused";else if(state==="paused")state="playing"}
+const defaultBinds={
+ p1Left:"a",p1Right:"d",p1Jump:"w",p1Shoot:"j",p1Weapon:"q",p1Pickup:"e",p1Enter:"g",
+ p2Left:"arrowleft",p2Right:"arrowright",p2Jump:"arrowup",p2Shoot:"enter",p2Weapon:"r",p2Pickup:"shift",p2Enter:"backspace",
+ p3Left:"c",p3Right:"v",p3Jump:"b",p3Shoot:"n",p3Weapon:"m",p4Left:"4",p4Right:"6",p4Jump:"8",p4Shoot:"0",p4Weapon:"9"
+};
+let binds={...defaultBinds},waitingForBind=null;
+const bindLabels={
+ p1Left:"P1 Move left",p1Right:"P1 Move right",p1Jump:"P1 Jump",p1Shoot:"P1 Shoot",p1Weapon:"P1 Change gun",p1Pickup:"P1 Pick up",p1Enter:"P1 Enter/exit",
+ p2Left:"P2 Move left",p2Right:"P2 Move right",p2Jump:"P2 Jump",p2Shoot:"P2 Shoot",p2Weapon:"P2 Change gun",p2Pickup:"P2 Pick up",p2Enter:"P2 Enter/exit",p3Left:"P3 Left",p3Right:"P3 Right",p3Jump:"P3 Jump",p3Shoot:"P3 Shoot",p3Weapon:"P3 Change gun",p4Left:"P4 Left",p4Right:"P4 Right",p4Jump:"P4 Jump",p4Shoot:"P4 Shoot",p4Weapon:"P4 Change gun"
+};
+function keyName(k){
+ const names={" ":"SPACE","arrowleft":"LEFT","arrowright":"RIGHT","arrowup":"UP","arrowdown":"DOWN","enter":"ENTER","shift":"SHIFT","backspace":"BACKSPACE","\\":"BACKSLASH"};
+ return names[k]||k.toUpperCase();
+}
+function toggleKeybinds(){
+ const panel=document.getElementById("keybindPanel");
+ panel.style.display=panel.style.display==="block"?"none":"block";
+ renderKeybinds();
+}
+function renderKeybinds(){
+ const root=document.getElementById("keybindRows");
+ root.innerHTML="";
+ for(const id of Object.keys(defaultBinds)){
+  const row=document.createElement("div");
+  row.style.cssText="display:flex;align-items:center;justify-content:space-between;gap:10px;margin:5px 0";
+  const label=document.createElement("span");label.textContent=bindLabels[id];label.style.fontSize="13px";
+  const btn=document.createElement("button");btn.textContent=waitingForBind===id?"PRESS A KEY":keyName(binds[id]);
+  btn.style.minWidth="110px";btn.onclick=()=>{waitingForBind=id;document.getElementById("bindStatus").textContent="Press a key for "+bindLabels[id];renderKeybinds()};
+  row.append(label,btn);root.append(row);
+ }
+}
+function resetKeybinds(){
+ binds={...defaultBinds};waitingForBind=null;
+ document.getElementById("bindStatus").textContent="Default controls restored.";
+ renderKeybinds();
+}
+function isDown(action){return !!keys[binds[action]]}
+document.addEventListener("keydown",e=>{
+ ensureAudio();
+ const k=e.key.toLowerCase();
+ if(waitingForBind){
+  e.preventDefault();
+  if(k==="escape"){waitingForBind=null;document.getElementById("bindStatus").textContent="Rebinding cancelled."}
+  else{
+   const clash=Object.keys(binds).find(id=>id!==waitingForBind&&binds[id]===k);
+   if(clash){document.getElementById("bindStatus").textContent="That key is already assigned to "+bindLabels[clash]+". Choose another."}
+   else{binds[waitingForBind]=k;waitingForBind=null;document.getElementById("bindStatus").textContent="Key saved for this game session."}
+  }
+  renderKeybinds();return;
+ }
+ keys[k]=true;
+ if([" ","arrowup","arrowdown","arrowleft","arrowright","enter","shift","backspace"].includes(k))e.preventDefault();
+ if(!e.repeat&&k===binds.p1Jump&&player.grounded&&state==="playing"){player.vy=-13;player.grounded=false;sfx("jump")}
+ if(!e.repeat&&k===binds.p1Shoot)shoot(player);
+ if(!e.repeat&&k===binds.p1Weapon)cycleWeapon(player);
+ if(twoPlayer&&!e.repeat&&k===binds.p2Jump&&player2.grounded&&state==="playing"){player2.vy=-13;player2.grounded=false;sfx("jump")}
+ if(twoPlayer&&!e.repeat&&k===binds.p2Shoot)shoot(player2);
+ if(twoPlayer&&!e.repeat&&k===binds.p2Weapon)cycleWeapon(player2);
+ if(playerCount>=3&&!e.repeat&&k===binds.p3Jump&&player3.grounded){player3.vy=-13;player3.grounded=false;sfx("jump")}
+ if(playerCount>=3&&!e.repeat&&k===binds.p3Shoot)shoot(player3);if(playerCount>=3&&!e.repeat&&k===binds.p3Weapon)cycleWeapon(player3);
+ if(playerCount>=4&&!e.repeat&&k===binds.p4Jump&&player4.grounded){player4.vy=-13;player4.grounded=false;sfx("jump")}
+ if(playerCount>=4&&!e.repeat&&k===binds.p4Shoot)shoot(player4);if(playerCount>=4&&!e.repeat&&k===binds.p4Weapon)cycleWeapon(player4);
+ if(!e.repeat&&k===binds.p1Pickup)collectSupply(player);
+
+ if(twoPlayer&&!e.repeat&&k===binds.p2Pickup)collectSupply(player2);
+
+ if(!e.repeat&&k===binds.p1Enter)toggleBuilding(player);
+ if(twoPlayer&&!e.repeat&&k===binds.p2Enter)toggleBuilding(player2);
+ if(!e.repeat&&k==="p")togglePause();
+});
+document.addEventListener("keyup",e=>keys[e.key.toLowerCase()]=false);
+function shoot(who=player){
+ const gun=weapons[who.weapon];
+ if(state!=="playing"||who.cooldown>0||who.ammo<=0)return;
+ who.cooldown=gun.rate;who.ammo--;if(who===player){cooldown=who.cooldown;ammo=who.ammo}
+ sfx("shoot");
+ const sx=who.x+(who.facing>0?who.w:-12),sy=who.y+29;
+ let target=null,best=700;
+ for(const z of [...zombies,...bandits.filter(r=>r.alive)]){if(!z.alive)continue;const dx=z.x+z.w/2-(sx+7),dy=z.y+z.h/2-(sy+4);if(dx*who.facing<=0)continue;const d=Math.hypot(dx,dy);if(d<best){best=d;target={dx,dy}}}
+ let baseVx=who.facing*gun.speed,baseVy=0;
+ if(target){const len=Math.hypot(target.dx,target.dy)||1;baseVx=target.dx/len*gun.speed;baseVy=target.dy/len*gun.speed}
+ for(let n=0;n<gun.pellets;n++){
+  const spread=(n-(gun.pellets-1)/2)*.13;
+  const a=Math.atan2(baseVy,baseVx)+spread;
+  bullets.push({x:sx,y:sy,w:14,h:7,vx:Math.cos(a)*gun.speed,vy:Math.sin(a)*gun.speed,life:90,hit:false,damage:gun.damage});
+ }
+ makeBurst(sx,sy,"#fbbf24",gun.pellets>1?7:3);
+}
+function cycleWeapon(who){
+ who.weapon=(who.weapon+1)%weapons.length;
+ setMessage((who===player2?"P2":"P1")+" equipped "+weapons[who.weapon].name);
+ updateHUD();
+}
+function overlap(a,b){return a.x+a.w>b.x&&a.x<b.x+b.w&&a.y+a.h>b.y&&a.y<b.y+b.h}
+function damage(n){if(player.invincible>0||state!=="playing")return;sfx("hit");health=Math.max(0,health-n);player.invincible=65;player.vy=-5;player.vx=-player.facing*4;shake=9;makeBurst(player.x+17,player.y+30,"#ef4444",10);if(health<=0)state="dead"}
+function collectSupply(who=player){
+ if(indoors){
+  let loot=null,dist=72;
+  for(const item of roomLoot){if(item.taken)continue;const d=Math.abs(item.x-(who.x+17));if(d<dist){dist=d;loot=item}}
+  if(!loot){setMessage("No resources close to "+(who===player2?"P2":"P1")+"!");return}
+  loot.taken=true;
+  if(["wood","metal","fuel"].includes(loot.type)){resources[loot.type]+=loot.amount;setMessage("Collected "+loot.amount+" "+loot.type.toUpperCase()+"!")}
+  if(loot.type==="ammo"){who.ammo=Math.min(99,who.ammo+loot.amount);setMessage("Collected +"+loot.amount+" ammo!")}
+  if(loot.type==="medkit"){who.health=Math.min(100,who.health+loot.amount);setMessage("Found a medkit! +"+loot.amount+" health")}
+  sfx("supply");updateHUD();return;
+ }
+ let found=-1,dist=78;
+ for(let i=0;i<supplies.length;i++){const d=Math.abs((supplies[i].x+18)-(who.x+17));if(d<dist){dist=d;found=i}}
+ if(found<0){setMessage("No supply crate close to "+(who===player2?"Player 2":"Player 1")+"!");return}
+ const s=supplies.splice(found,1)[0];sfx("supply");makeBurst(s.x+18,s.y+20,"#facc15",22);
+ if(s.type==="ammo"){who.ammo=Math.min(99,who.ammo+25);setMessage("🔫 "+(who===player2?"P2":"P1")+" collected +25 ammo")}
+ if(s.type==="medkit"){who.health=Math.min(100,who.health+40);setMessage("❤️ "+(who===player2?"P2":"P1")+" collected +40 health")}
+ if(s.type==="upgrade"){weaponLevel++;fireRate=Math.max(6,fireRate-3);who.ammo=Math.min(99,who.ammo+15);setMessage("⚡ WEAPON UPGRADED! +15 ammo")}
+ updateHUD();
+}
+function toggleBuilding(who){
+ if(indoors){
+  if(who!==player && !twoPlayer)return;
+  if(outsidePositions){player.x=outsidePositions.p1.x;player.y=426;if(twoPlayer){player2.x=outsidePositions.p2.x;player2.y=426}}
+  indoors=false;insideBuilding=null;outsidePositions=null;camera=Math.max(0,player.x-W*.38);
+  setMessage("You stepped back outside.");
+  return;
+ }
+ const near=buildings.find(b=>Math.abs((b.x+b.w/2)-(who.x+who.w/2))<90);
+ if(!near){setMessage("Move close to a building entrance first.");return}
+ outsidePositions={p1:{x:player.x},p2:{x:player2.x}};
+ indoors=true;insideBuilding=near;
+ roomLoot.length=0;
+ const lootSets=[
+  [[145,"wood",8],[365,"metal",3],[610,"ammo",18],[820,"medkit",25]],
+  [[145,"ammo",28],[365,"fuel",2],[610,"metal",5],[820,"wood",4]],
+  [[145,"metal",8],[365,"wood",10],[610,"fuel",3],[820,"ammo",12]],
+  [[145,"medkit",35],[365,"ammo",16],[610,"metal",3],[820,"fuel",1]],
+  [[145,"metal",7],[365,"ammo",24],[610,"fuel",2],[820,"wood",5]],
+  [[145,"wood",12],[365,"fuel",1],[610,"medkit",20],[820,"ammo",10]]
+ ];
+ for(const [x,type,amount] of lootSets[near.type])roomLoot.push({x,y:395,type,amount,taken:false});
+ player.x=230;player.y=426;player.vx=0;player.vy=0;
+ if(twoPlayer){player2.x=690;player2.y=426;player2.vx=0;player2.vy=0}
+ camera=0;setMessage("🏠 You entered the building! Explore, then press G / BACKSPACE to leave.");
+}
+
+function buildItem(type){
+ if(indoors){setMessage("Build outside near your base.");return}
+ const grid=48,raw=player.x+player.facing*145,x=Math.max(48,Math.min(worldWidth-96,Math.round(raw/grid)*grid));
+ if(baseStructures.some(st=>Math.abs(st.x-x)<34)){setMessage("That grid space is occupied. Move to another spot.");return}
+ const costs={wall:{wood:8},turret:{metal:12,fuel:5},trap:{wood:5,metal:3},storage:{wood:12,metal:6},reinforced:{wood:10,metal:10},sniper:{metal:20,fuel:8},repair:{metal:10,fuel:5}}[type];
+ if(!costs){setMessage("Unknown building piece.");return}
+ for(const [k,v] of Object.entries(costs)){if(resources[k]<v){setMessage(`Need ${v} ${k.toUpperCase()} to build this.`);return}}
+ for(const [k,v] of Object.entries(costs))resources[k]-=v;
+ // Every structure is anchored to the actual ground line (platform top = 490).
+ const hp=type==='reinforced'?260:type==='wall'?100:type==='turret'?160:type==='sniper'?150:type==='repair'?140:180;
+ const obj={type,x,y:490,hp,maxHp:hp,cooldown:0,level:1,flash:0};
+ baseStructures.push(obj);setMessage(`${type.toUpperCase()} placed on the ground!`);sfx("supply");updateHUD();
+}
+function storeResources(){
+ const used=storage.wood+storage.metal+storage.fuel,free=storage.capacity-used;
+ if(free<=0){setMessage("Storage is full!");return}
+ let moved=0;for(const k of ["wood","metal","fuel"]){const n=Math.min(resources[k],free-moved);resources[k]-=n;storage[k]+=n;moved+=n;if(moved>=free)break}
+ setMessage(moved?`Stored ${moved} resources. Storage ${storage.wood+storage.metal+storage.fuel}/${storage.capacity}.`:"You have no carried resources to store.");updateHUD();
+}
+function withdrawResources(){
+ let moved=0;for(const k of ["wood","metal","fuel"]){const n=Math.min(storage[k],99-resources[k]);storage[k]-=n;resources[k]+=n;moved+=n}
+ setMessage(moved?`Withdrew ${moved} resources from storage.`:"No stored resources available or carried inventory is full.");updateHUD();
+}
+
+function startRandomEvent(){
+ const events=["SUPPLY SHOWER","BANDIT RAID","BLOOD MOON"];
+ eventName=events[Math.floor(Math.random()*events.length)];eventTimer=900;
+ if(eventName==="BLOOD MOON"){bloodMoon=true;night=true;setMessage("🩸 BLOOD MOON! More zombies are roaming!");for(let i=0;i<12;i++)zombies.push({x:Math.min(worldWidth-80,camera+W+100+i*45),y:426,w:38,h:64,hp:5,maxHp:5,alive:true,speed:1.05,facing:-1,anim:0,attackCooldown:0,kind:"runner"});}
+ else if(eventName==="BANDIT RAID"){setMessage("🏴 NIGHT RAID! Bandits are after your stored supplies!");for(let i=0;i<4;i++)bandits.push({x:Math.min(worldWidth-80,camera+W+100+i*55),y:426,w:34,h:64,hp:5,alive:true,speed:1.25,attack:0,loot:0,anim:0,nightRaider:true});}
+ else {setMessage("📦 RANDOM EVENT: Supply shower!");dropSupply();dropSupply();}
+}
+
+function update(){
+ frame++;if(state!=="playing")return;
+ dayClock++;if(dayClock%900===0){night=!night;if(!night){bloodMoon=false;setMessage("Sunrise! The night is over.")}else setMessage("Night has fallen. Stay near your base!")}
+ if(night&&dayClock%1800===0)startRandomEvent();if(eventTimer>0){eventTimer--;if(eventTimer===0){bloodMoon=false;eventName=""}}
+ if(cooldown>0)cooldown--;if(player.invincible>0)player.invincible--;if(shake>0)shake*=.82;if(messageTimer>0)messageTimer--;
+ const oldYs=playerSlots.map(h=>h.y);
+ function moveHero(h,slot){
+  if(onlineActive && slot!==onlineSlot)return;
+  h.vx=0;
+  const left=["p1Left","p2Left","p3Left","p4Left"][slot],right=["p1Right","p2Right","p3Right","p4Right"][slot];
+  if(isDown(left)){h.vx=-h.speed;h.facing=-1}
+  if(isDown(right)){h.vx=h.speed;h.facing=1}
+  h.x=Math.max(indoors?75:0,Math.min((indoors?W-75:worldWidth-h.w),h.x+h.vx));
+  h.vy=Math.min(15,h.vy+.6);h.y+=h.vy;h.grounded=false;
+  if(indoors){if(h.y>=426){h.y=426;h.vy=0;h.grounded=true}}
+  if(!indoors)for(const p of platforms){const horizontal=h.x+h.w>p.x&&h.x<p.x+p.w;const crossed=oldYs[slot]+h.h<=p.y&&h.y+h.h>=p.y;if(horizontal&&crossed&&h.vy>=0){h.y=p.y-h.h;h.vy=0;h.grounded=true}}
+  if(Math.abs(h.vx)>0)h.anim+=.22;
+  if(h.invincible>0)h.invincible--;
+  if(h.cooldown>0)h.cooldown--;
+ }
+ const activeHeroes=playerSlots.slice(0,playerCount);
+ moveHero(player,0);if(playerCount>=2)moveHero(player2,1);if(playerCount>=3)moveHero(player3,2);if(playerCount>=4)moveHero(player4,3);
+ for(const h of activeHeroes){if(h.y>650){h.y=426;h.vy=0;h.grounded=true;h.health=Math.max(1,h.health-10);setMessage("Player respawned on the ground.")}}
+ if(activeHeroes.every(h=>h.health<=0)){state="dead";return}
+ for(const z of zombies){if(!z.alive||indoors)continue;
+  let target=activeHeroes[0],closest=Infinity;
+  for(const h of activeHeroes){const d=Math.abs(h.x-z.x);if(d<closest){closest=d;target=h}}
+  const dx=target.x-z.x;if(Math.abs(dx)<650){z.facing=dx>0?1:-1;z.vx=z.facing*z.speed*(z.kind==="runner"?1.45:1)}else z.vx=Math.sin(frame*.025)*.45;
+  z.x=Math.max(0,Math.min(worldWidth-z.w,z.x+z.vx));z.anim+=Math.abs(z.vx)*.13;if(z.attackCooldown>0)z.attackCooldown--;
+  for(const h of activeHeroes){const wasY=oldYs[playerSlots.indexOf(h)]??h.y;
+   if(overlap(h,z)){
+    if(h.vy>1&&wasY+h.h<=z.y+20){z.hp--;h.vy=-9;makeBurst(z.x+19,z.y+28,"#a3e635",8);if(z.hp<=0){z.alive=false;score+=100;sfx("kill");makeBurst(z.x+19,z.y+30,"#84cc16",18)}}
+    else if(z.attackCooldown<=0&&h.invincible<=0){h.health=Math.max(0,h.health-10);h.invincible=65;h.vy=-5;h.vx=-h.facing*4;shake=9;sfx("hit");z.attackCooldown=55}
+   }
+  }
+ }
+ for(const b of bullets){if(b.hit)continue;b.x+=b.vx;b.y+=b.vy;b.life--;for(const r of bandits){if(!r.alive)continue;if(overlap(b,r)){r.hp-=b.damage||1;b.hit=true;makeBurst(b.x,b.y,"#fbbf24",5);if(r.hp<=0){r.alive=false;score+=150;resources.wood+=2;setMessage("BANDIT defeated! Recovered supplies +2 wood") }break}}for(const z of zombies){if(!z.alive)continue;if(overlap(b,z)){z.hp-=b.damage||1;b.hit=true;makeBurst(b.x,b.y,"#fbbf24",5);if(z.hp<=0){z.alive=false;score+=100;sfx("kill");makeBurst(z.x+19,z.y+30,"#84cc16",18)}break}}}
+ for(let i=bullets.length-1;i>=0;i--)if(bullets[i].life<=0||bullets[i].hit||bullets[i].x<0||bullets[i].x>worldWidth)bullets.splice(i,1);
+ for(let i=particles.length-1;i>=0;i--){const p=particles[i];p.x+=p.vx;p.y+=p.vy;p.vy+=.12;p.life--;if(p.life<=0)particles.splice(i,1)}
+ if(!indoors&&frame>=nextSupplyAt){dropSupply();nextSupplyAt=frame+650}
+ // Mia, Noah and Zara are active teammates. A human can take over their exact character.
+ const livingTeam=[...activeHeroes,...teamBots.filter(b=>!b.controlled)];
+ for(const b of teamBots){
+  b.skillTimer++;const controlled=b.controlled;
+  if(!controlled){const target=activeHeroes.reduce((best,h)=>Math.abs(h.x-b.x)<Math.abs(best.x-b.x)?h:best,activeHeroes[0]);const dx=target.x-b.x; if(Math.abs(dx)>75){b.vx=Math.sign(dx)*Math.min(3.2,Math.abs(dx)*.035);b.facing=dx>0?1:-1}else b.vx=Math.sin(frame*.035+b.x)*.5;
+   b.x=Math.max(0,Math.min(worldWidth-b.w,b.x+b.vx));b.anim+=Math.abs(b.vx)*.15;b.cooldown=Math.max(0,b.cooldown-1);
+   let enemy=null,dist=390;for(const z of zombies){if(!z.alive)continue;const d=Math.abs(z.x-b.x);if(d<dist){dist=d;enemy=z}}
+   if(enemy&&b.cooldown<=0){enemy.hp-=b.role==="GUARD"?2:1;b.cooldown=b.role==="GUARD"?48:75;makeBurst(enemy.x+18,enemy.y+25,b.shirt,4);if(enemy.hp<=0){enemy.alive=false;score+=100;sfx("kill");setMessage(b.name+" defeated a zombie!")}}
+  }
+  if(b.role==="MEDIC"&&b.skillTimer>=180){b.skillTimer=0;let h=livingTeam.filter(t=>t.health<100).sort((a,c)=>a.health-c.health)[0];if(h){h.health=Math.min(100,h.health+7);setMessage("MIA healed a teammate +7 ❤️")}}
+  if(b.role==="SCAVENGER"&&b.skillTimer>=220){b.skillTimer=0;const h=livingTeam.sort((a,c)=>a.ammo-c.ammo)[0];if(h){h.ammo=Math.min(99,h.ammo+8);resources.wood+=1;setMessage("ZARA found ammo and wood!")}}
+ }
+ // Bandits raid the map and steal loose supplies/resources before retreating.
+ for(const r of bandits){if(!r.alive)continue;r.anim++;r.attack=Math.max(0,r.attack-1);let target=activeHeroes[0];let nearest=Math.abs(target.x-r.x);for(const h of activeHeroes){if(Math.abs(h.x-r.x)<nearest){target=h;nearest=Math.abs(h.x-r.x)}}
+  if(nearest<520){r.x+=Math.sign(target.x-r.x)*r.speed;if(nearest<42&&r.attack<=0){target.health=Math.max(0,target.health-5);r.attack=75;setMessage("BANDIT raider attacked the team!")}else if(r.nightRaider&&nearest<420&&r.attack<=0){target.health=Math.max(0,target.health-3);r.attack=95;makeBurst(target.x+17,target.y+25,"#fca5a5",3);setMessage("A raider fired a game projectile at the team!")}}
+  else {let crate=supplies.find(q=>q.x>r.x-80&&q.x<r.x+260);if(crate){r.x+=Math.sign(crate.x-r.x)*r.speed;if(Math.abs(crate.x-r.x)<32){supplies.splice(supplies.indexOf(crate),1);r.loot++;stolenLoot++;setMessage("A BANDIT STOLE A SUPPLY CRATE!")}}else r.x+=Math.sin(frame*.012+r.x)*.35}
+  r.x=Math.max(0,Math.min(worldWidth-r.w,r.x));
+ }
+ for(const structure of baseStructures){
+  if(["turret","sniper"].includes(structure.type)){
+   structure.cooldown=Math.max(0,structure.cooldown-1);if(structure.flash>0)structure.flash--;
+   if(structure.cooldown===0){
+    const range=structure.type==="sniper"?900:650;
+    const candidates=[...zombies.filter(z=>z.alive),...bandits.filter(r=>r.alive)];
+    let target=null,best=range;
+    for(const enemy of candidates){const dx=(enemy.x+enemy.w/2)-(structure.x);const dy=(enemy.y+enemy.h/2)-(structure.y-22);const d=Math.hypot(dx,dy);if(d<best){best=d;target=enemy}}
+    if(target){
+     const damage=structure.type==="sniper"?5:3;target.hp-=damage;structure.cooldown=structure.type==="sniper"?48:24;structure.flash=7;
+     // Bright impact effect makes each automatic shot visible.
+     makeBurst(target.x+target.w/2,target.y+target.h/2,structure.type==="sniper"?"#f59e0b":"#67e8f9",7);
+     if(target.hp<=0){target.alive=false;score+=target.w===38?100:150;setMessage(`${structure.type.toUpperCase()} TURRET eliminated a threat!`);sfx("kill")}
+    }
+   }
+  }
+  if(structure.type==="trap"){for(const r of bandits){if(r.alive&&Math.abs(r.x-structure.x)<26){r.hp-=.08}}for(const z of zombies){if(z.alive&&Math.abs(z.x-structure.x)<25)z.hp-=.04}}
+  if(structure.type==="repair"&&frame%90===0){const damaged=baseStructures.find(st=>st!==structure&&st.hp<st.maxHp&&Math.abs(st.x-structure.x)<300);if(damaged)damaged.hp=Math.min(damaged.maxHp,damaged.hp+3)}
+ }
+ for(const r of bandits){if(r.alive&&r.x<player.x+650&&r.x>player.x-500&&frame%120===0){const lost=Math.min(resources.wood,1);resources.wood-=lost;stolenLoot+=lost;if(lost)setMessage("Bandits stole 1 wood from your carried supplies!")}
+  if(r.alive&&frame%150===0){const depot=baseStructures.find(st=>st.type==="storage"&&Math.abs(st.x-r.x)<45);if(depot){const kind=["wood","metal","fuel"].find(k=>storage[k]>0);if(kind){storage[k]--;stolenLoot++;r.loot++;setMessage("RAIDERS BROKE INTO STORAGE AND STOLE 1 "+kind.toUpperCase()+"!")}}}
+ }
+ for(const s of supplies){if(!s.landed){s.y+=2.1;if(s.y>=s.groundY){s.y=s.groundY;s.landed=true}}s.bob+=.08;s.glow+=.1}
+ if(zombies.every(z=>!z.alive)){wave++;spawnWave();setMessage("🌊 WAVE "+wave+"! More zombies are coming!")}
+ health=player.health;ammo=player.ammo;
+ const teamX=activeHeroes.reduce((sum,h)=>sum+h.x,0)/activeHeroes.length;
+ const target=indoors?0:Math.max(0,Math.min(worldWidth-W,teamX-W*.38));camera+=(target-camera)*.16;
+ updateHUD();
+}
+function updateHUD(){
+ health=player.health;ammo=player.ammo;
+ const playersTxt=playerSlots.slice(1,playerCount).map((h,i)=>` | P${i+2} ❤️ ${h.health} 🔫 ${h.ammo}`).join("");
+ document.getElementById("hud").textContent=`P1 ❤️ ${player.health} | 🔫 ${player.ammo}${playersTxt} | 🧟 ${zombies.filter(z=>z.alive).length} | ⭐ ${score} | 🌊 Wave ${wave} | ${night?"🌙 NIGHT":"☀️ DAY"}${bloodMoon?" 🩸 BLOOD MOON":""} | 🪵 ${resources.wood} 🔩 ${resources.metal} ⛽ ${resources.fuel} | 🤖 Bots ${teamBots.filter(b=>!b.controlled).length} | 🏴 Bandits ${bandits.filter(b=>b.alive).length} | 📦 Storage ${storage.wood+storage.metal+storage.fuel}/${storage.capacity} (W${storage.wood}/M${storage.metal}/F${storage.fuel}) | Stolen ${stolenLoot}`;
+}
+
+function drawBackground(){
+ const sky=ctx.createLinearGradient(0,0,0,H);sky.addColorStop(0,"#5d91b5");sky.addColorStop(.65,"#a8b8b0");sky.addColorStop(1,"#e0b978");ctx.fillStyle=sky;ctx.fillRect(0,0,W,H);
+ // glowing sun
+ ctx.fillStyle="#ffd98a";ctx.beginPath();ctx.arc(820,105,42,0,Math.PI*2);ctx.fill();
+ for(let i=0;i<18;i++){let x=((i*170-camera*.22)%1200+1200)%1200,h=100+(i*43)%160;ctx.fillStyle="#52616d";ctx.fillRect(x,490-h,100,h);for(let r=0;r<4;r++)for(let c=0;c<3;c++){ctx.fillStyle="#d6b978";ctx.fillRect(x+12+c*27,490-h+20+r*30,10,13)}}
+}
+function drawCity(){
+ for(const b of buildings){const x=b.x;if(x-camera<-200||x-camera>W+200)continue;const y=490-b.h;ctx.fillStyle=["#374151","#475569","#57534e","#334155"][b.type];ctx.fillRect(x,y,b.w,b.h);ctx.fillStyle="#202b36";ctx.fillRect(x-5,y-9,b.w+10,10);
+  for(let r=0;r<Math.floor(b.h/32);r++)for(let c=0;c<Math.floor(b.w/25);c++){ctx.fillStyle=(r+c+Math.floor(frame/80))%4===0?"#ffd166":"#263b47";ctx.fillRect(x+10+c*25,y+18+r*32,12,16)}
+  if(b.type===1){ctx.fillStyle="#991b1b";ctx.fillRect(x+8,y+45,b.w-16,24);ctx.fillStyle="white";ctx.font="10px Arial";ctx.fillText("SUPPLIES",x+10,y+61)}
+ }
+ ctx.fillStyle="#30343a";ctx.fillRect(0,490,worldWidth,60);ctx.fillStyle="#d9c87a";for(let i=0;i<36;i++)ctx.fillRect(i*120,520,55,5);ctx.fillStyle="#8b9295";ctx.fillRect(0,480,worldWidth,10);
+}
+function drawHero(h=player,second=false){
+ const x=h.x,y=h.y;if(h.invincible>0&&frame%8<4)return;const walk=Math.sin(h.anim)*6,l1=h.grounded?walk:0,l2=h.grounded?-walk:0;
+ ctx.save();ctx.translate(x+17,y);ctx.scale(h.facing,1);
+ ctx.fillStyle="#0005";ctx.beginPath();ctx.ellipse(0,65,20,5,0,0,Math.PI*2);ctx.fill();
+ ctx.fillStyle="#293849";ctx.fillRect(-10,43+l1,9,15);ctx.fillRect(3,43+l2,9,15);ctx.fillStyle="#171b22";ctx.fillRect(-12,55+l1,14,7);ctx.fillRect(1,55+l2,15,7);
+ ctx.fillStyle=h.shirt||"#315c4c";ctx.fillRect(-12,19,24,27);ctx.fillStyle="#1d4036";ctx.fillRect(-3,20,5,25);ctx.fillStyle="#d6c6a4";ctx.fillRect(-8,27,5,3);
+ ctx.fillStyle="#d89c72";ctx.fillRect(-4,14,9,8);ctx.fillStyle="#d9a27e";ctx.beginPath();ctx.arc(0,10,11,0,Math.PI*2);ctx.fill();ctx.fillStyle="#34251e";ctx.fillRect(-10,1,20,6);ctx.fillRect(-10,5,4,7);ctx.fillStyle="#171717";ctx.fillRect(5,8,3,3);
+ const arm=Math.sin((h.anim||0))*3;ctx.fillStyle=h.shirt||"#315c4c";ctx.fillRect(8,23+arm,8,16);ctx.fillStyle="#d9a27e";ctx.fillRect(10,36+arm,8,7);
+ ctx.fillStyle="#20252d";ctx.fillRect(10,31+arm,19,6);ctx.fillStyle="#64748b";ctx.fillRect(23,29+arm,9,4);ctx.fillStyle="#111827";ctx.fillRect(13,36+arm,6,7);ctx.fillStyle="#0e141a";ctx.fillRect(29,30+arm,7,3);
+ if(h.cooldown>fireRate-4){ctx.fillStyle="#fde68a";ctx.beginPath();ctx.moveTo(36,29+arm);ctx.lineTo(49,25+arm);ctx.lineTo(45,34+arm);ctx.lineTo(36,33+arm);ctx.fill()}
+ ctx.restore();
+ if(second){ctx.fillStyle="#67e8f9";ctx.font="bold 12px Arial";ctx.textAlign="center";ctx.fillText("P2",x+17,y-7);ctx.textAlign="left"}
+}
+function drawZombie(z){
+ const x=z.x,y=z.y,walk=Math.sin(z.anim)*7;ctx.save();ctx.translate(x+19,y);ctx.scale(z.facing,1);
+ ctx.fillStyle="#0004";ctx.beginPath();ctx.ellipse(0,65,21,5,0,0,Math.PI*2);ctx.fill();
+ ctx.fillStyle=z.kind==="runner"?"#647c3e":"#394b3b";ctx.fillRect(-10,40+walk,9,18);ctx.fillRect(3,40-walk,9,18);ctx.fillStyle="#263329";ctx.fillRect(-12,54+walk,13,6);ctx.fillRect(1,54-walk,14,6);
+ ctx.fillStyle=z.kind==="runner"?"#6d7d45":"#526b45";ctx.fillRect(-13,19,26,26);ctx.fillStyle="#452e2e";ctx.fillRect(-13,24,8,18);ctx.fillRect(6,32,8,13);ctx.fillStyle="#80916a";ctx.fillRect(-5,13,10,10);
+ ctx.fillStyle="#849b6c";ctx.beginPath();ctx.arc(0,9,12,0,Math.PI*2);ctx.fill();ctx.fillStyle="#292e26";ctx.fillRect(-11,0,20,5);ctx.fillStyle="#ff3434";ctx.fillRect(-7,7,5,4);ctx.fillRect(3,7,5,4);ctx.fillStyle="#3c1919";ctx.fillRect(-5,15,11,3);
+ const reach=Math.sin(frame*.12)*4;ctx.fillStyle="#80916a";ctx.fillRect(7,23+reach,8,19);ctx.fillRect(11,37+reach,12,7);ctx.restore();
+ if(z.hp<z.maxHp){ctx.fillStyle="#111827";ctx.fillRect(x,y-12,38,5);ctx.fillStyle="#ef4444";ctx.fillRect(x,y-12,38*z.hp/z.maxHp,5)}
+ if(z.kind==="runner"){ctx.fillStyle="#fca5a5";ctx.font="10px Arial";ctx.fillText("RUNNER",x-3,y-18)}
+}
+function drawSurvivor(s,x=s.x,y=s.y){
+ const step=Math.sin((s.anim||frame*.04)*1.7)*4;ctx.save();ctx.translate(x+17,y); 
+ ctx.fillStyle="#0004";ctx.beginPath();ctx.ellipse(0,65,16,4,0,0,Math.PI*2);ctx.fill();
+ ctx.fillStyle="#263449";ctx.fillRect(-8,42+step,7,17);ctx.fillRect(2,42-step,7,17);
+ ctx.fillStyle="#111827";ctx.fillRect(-10,56,10,6);ctx.fillRect(1,56,11,6);
+ ctx.fillStyle=s.shirt;ctx.fillRect(-11,19,22,26);
+ ctx.fillStyle="#d7a17e";ctx.beginPath();ctx.arc(0,10,10,0,Math.PI*2);ctx.fill();
+ ctx.fillStyle="#3b2b25";ctx.fillRect(-9,1,18,5);
+ ctx.fillStyle="#fff";ctx.font="bold 11px Arial";ctx.textAlign="center";ctx.fillText(s.name+" · "+s.role,0,-9);
+ ctx.restore();
+}
+function drawSupply(s){
+ const x=s.x,y=s.y+Math.sin(s.bob)*2;
+ ctx.save();ctx.shadowColor="#facc15";ctx.shadowBlur=18+Math.sin(s.glow)*8;
+ ctx.fillStyle="#d1d5db";ctx.fillRect(x+5,y-10,26,13);
+ ctx.fillStyle=s.type==="ammo"?"#2563eb":s.type==="medkit"?"#dc2626":"#7c3aed";ctx.fillRect(x,y,36,27);
+ ctx.fillStyle="#f8fafc";ctx.fillRect(x+15,y+4,6,19);ctx.fillRect(x+8,y+10,20,6);
+ ctx.restore();
+ ctx.fillStyle="#fff";ctx.font="bold 11px Arial";ctx.textAlign="center";ctx.fillText("E",x+18,y-16);ctx.textAlign="left";
+}
+function draw(){
+ ctx.save();if(shake>0)ctx.translate((Math.random()-.5)*shake,(Math.random()-.5)*shake);
+ if(indoors){
+  const roomType=insideBuilding?insideBuilding.type:0;
+  const roomNames=["ABANDONED HOUSE","SUPPLY DEPOT","WORKSHOP","FIELD CLINIC","SECURITY STATION","GREENHOUSE"];
+  const wallColors=["#334155","#3f3b32","#374151","#365047","#263747","#36523b"];
+  const floorColors=["#786b58","#6b6252","#59616a","#6d7660","#4b5563","#596b4a"];
+  ctx.fillStyle="#111827";ctx.fillRect(0,0,W,H);
+  ctx.fillStyle=wallColors[roomType];ctx.fillRect(28,42,944,448);
+  ctx.fillStyle="#1f2937";ctx.fillRect(48,62,904,368);
+  // Wall panels and beams give every interior more depth.
+  ctx.fillStyle="#ffffff12";for(let x=70;x<950;x+=110)ctx.fillRect(x,65,7,360);
+  ctx.fillStyle=floorColors[roomType];ctx.fillRect(48,430,904,60);
+  for(let x=55;x<950;x+=75){ctx.fillStyle="#00000022";ctx.fillRect(x,432,2,56)}
+  // Windows, exit and overhead light.
+  ctx.fillStyle="#0f172a";ctx.fillRect(420,65,160,125);
+  ctx.fillStyle=roomType===3?"#bbf7d0":"#93c5fd";ctx.fillRect(432,77,136,101);
+  ctx.fillStyle="#64748b";ctx.fillRect(495,77,8,101);ctx.fillRect(432,124,136,7);
+  ctx.fillStyle="#78350f";ctx.fillRect(885,300,48,130);ctx.fillStyle="#fbbf24";ctx.beginPath();ctx.arc(895,365,4,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle="#fef3c7";ctx.beginPath();ctx.arc(155,100,13,0,Math.PI*2);ctx.fill();ctx.fillStyle="#fef3c755";ctx.beginPath();ctx.arc(155,100,29,0,Math.PI*2);ctx.fill();
+  if(roomType===0){ // house: beds, table, cupboards
+   ctx.fillStyle="#854d0e";ctx.fillRect(85,320,180,18);ctx.fillRect(95,338,12,78);ctx.fillRect(245,338,12,78);
+   ctx.fillStyle="#cbd5e1";ctx.fillRect(95,295,160,25);ctx.fillStyle="#64748b";ctx.fillRect(95,320,160,7);
+   ctx.fillStyle="#92400e";ctx.fillRect(690,350,150,18);ctx.fillRect(705,368,12,45);ctx.fillRect(815,368,12,45);
+   ctx.fillStyle="#a8a29e";ctx.fillRect(720,330,90,20);
+  }else if(roomType===1){ // depot: stacked crates and shelving
+   ctx.fillStyle="#854d0e";for(let i=0;i<4;i++){ctx.fillRect(90+i*48,345-(i%2)*35,42,42);ctx.strokeStyle="#d6a75c";ctx.strokeRect(90+i*48,345-(i%2)*35,42,42)}
+   ctx.fillStyle="#64748b";ctx.fillRect(700,220,170,15);ctx.fillRect(700,300,170,15);ctx.fillRect(700,380,170,15);
+   for(let y of [235,315,395])for(let x=715;x<855;x+=42){ctx.fillStyle="#b45309";ctx.fillRect(x,y,30,48)}
+  }else if(roomType===2){ // workshop: workbench, tools and metal lockers
+   ctx.fillStyle="#92400e";ctx.fillRect(95,350,300,20);ctx.fillRect(110,370,15,55);ctx.fillRect(365,370,15,55);
+   ctx.fillStyle="#94a3b8";ctx.fillRect(135,315,18,35);ctx.fillRect(195,300,12,50);ctx.fillRect(255,320,55,30);
+   ctx.fillStyle="#334155";ctx.fillRect(700,260,145,165);ctx.fillStyle="#64748b";ctx.fillRect(715,275,52,135);ctx.fillRect(780,275,52,135);
+  }else if(roomType===3){ // clinic: examination beds and medical cabinets
+   ctx.fillStyle="#e2e8f0";ctx.fillRect(90,335,230,20);ctx.fillRect(105,355,14,65);ctx.fillRect(290,355,14,65);
+   ctx.fillStyle="#93c5fd";ctx.fillRect(105,315,200,20);
+   ctx.fillStyle="#f8fafc";ctx.fillRect(700,245,145,180);ctx.fillStyle="#dc2626";ctx.fillRect(765,265,14,70);ctx.fillRect(737,293,70,14);
+  }else if(roomType===4){ctx.fillStyle="#475569";ctx.fillRect(100,270,260,150);ctx.fillStyle="#0ea5e9";ctx.fillRect(125,295,95,70);ctx.fillStyle="#64748b";ctx.fillRect(650,250,200,170);ctx.fillStyle="#94a3b8";ctx.fillRect(675,275,150,12)}else{ctx.fillStyle="#166534";for(let i=0;i<5;i++){ctx.fillRect(100+i*70,320,38,90);ctx.fillStyle="#4ade80";ctx.beginPath();ctx.arc(119+i*70,300,24,0,Math.PI*2);ctx.fill();ctx.fillStyle="#166534"}ctx.fillStyle="#854d0e";ctx.fillRect(650,365,180,25)}
+  ctx.fillStyle="#fef3c7";ctx.font="bold 24px Arial";ctx.textAlign="center";ctx.fillText(roomNames[roomType],W/2,35);
+  ctx.font="14px Arial";ctx.fillText("Search the room for supplies • E / SHIFT to collect • G / BACKSPACE to exit",W/2,520);ctx.textAlign="left";
+  for(const item of roomLoot){if(item.taken)continue;
+   ctx.fillStyle=item.type==="wood"?"#b45309":item.type==="metal"?"#94a3b8":item.type==="ammo"?"#2563eb":item.type==="fuel"?"#a16207":"#dc2626";
+   ctx.fillRect(item.x-13,385,26,28);ctx.fillStyle="#fff";ctx.font="bold 10px Arial";ctx.textAlign="center";ctx.fillText(item.type.toUpperCase(),item.x,378);ctx.textAlign="left";
+  }
+  for(let i=0;i<playerCount;i++)drawHero(playerSlots[i],i>0);
+  if(messageTimer>0){ctx.fillStyle="#0f172acc";ctx.fillRect(250,18,500,38);ctx.fillStyle="#fef3c7";ctx.font="bold 17px Arial";ctx.textAlign="center";ctx.fillText(supplyMessage,W/2,43);ctx.textAlign="left"}
+  ctx.restore();return;
+ }
+ drawBackground();
+ // Region atmosphere changes across the expanded world.
+ const region=Math.floor(camera/1600)%5;const regionColors=["#334155","#36523b","#66513b","#3f4b55","#5b4b6b"];ctx.fillStyle=regionColors[region]+"22";ctx.fillRect(0,0,W,H);
+ if(night){ctx.fillStyle=bloodMoon?"#4c051e88":"#02061788";ctx.fillRect(0,0,W,H);}
+ ctx.save();ctx.translate(-camera,0);
+ for(const p of platforms){ctx.fillStyle="#454b4e";ctx.fillRect(p.x,p.y,p.w,p.h);ctx.fillStyle="#7c8585";ctx.fillRect(p.x,p.y,p.w,5)}
+ drawCity();
+ const regionNames=["RUINED CITY","OVERGROWN PARK","INDUSTRIAL YARD","RIVERSIDE DISTRICT","OLD TOWN"];ctx.fillStyle="#f8fafc";ctx.font="bold 13px Arial";ctx.fillText(regionNames[Math.floor(camera/1600)%5],camera+20,28);
+ // Bandit hideouts and warning flags.
+ for(const c of banditCamps){ctx.fillStyle="#713f12";ctx.fillRect(c.x,430,c.w,60);ctx.fillStyle="#292524";ctx.fillRect(c.x+18,365,95,65);ctx.fillStyle="#dc2626";ctx.fillRect(c.x+20,342,4,30);ctx.beginPath();ctx.moveTo(c.x+24,342);ctx.lineTo(c.x+62,352);ctx.lineTo(c.x+24,362);ctx.fill();ctx.fillStyle="#fef3c7";ctx.font="bold 11px Arial";ctx.fillText("BANDIT CAMP",c.x+12,420)}
+ for(const s of supplies)drawSupply(s);for(const z of zombies)if(z.alive)drawZombie(z);
+ for(const st of baseStructures){if(st.type==="wall"||st.type==="reinforced"){ctx.fillStyle=st.type==="reinforced"?"#64748b":"#92400e";ctx.fillRect(st.x-12,st.y-62,28,62);ctx.fillStyle=st.type==="reinforced"?"#cbd5e1":"#d6a75c";for(let q=0;q<3;q++)ctx.fillRect(st.x-8+q*8,st.y-58,4,54)}else if(st.type==="turret"||st.type==="sniper"){ctx.fillStyle="#475569";ctx.fillRect(st.x-20,st.y-22,40,22);ctx.fillStyle=st.type==="sniper"?"#f59e0b":"#94a3b8";ctx.fillRect(st.x-5,st.y-39,st.type==="sniper"?38:28,9);ctx.fillStyle=st.flash>0?"#fef08a":"#22d3ee";ctx.beginPath();ctx.arc(st.x,st.y-27,5,0,Math.PI*2);ctx.fill();if(st.flash>0){ctx.strokeStyle="#67e8f9";ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(st.x+12,st.y-34);ctx.lineTo(st.x+38,st.y-44);ctx.stroke()}}else if(st.type==="storage"){ctx.fillStyle="#92400e";ctx.fillRect(st.x-20,st.y-38,40,38);ctx.strokeStyle="#fbbf24";ctx.strokeRect(st.x-20,st.y-38,40,38);ctx.fillStyle="#fbbf24";ctx.fillRect(st.x-4,st.y-24,8,7)}else if(st.type==="repair"){ctx.fillStyle="#334155";ctx.fillRect(st.x-22,st.y-28,44,28);ctx.fillStyle="#4ade80";ctx.fillRect(st.x-4,st.y-23,8,18);ctx.fillRect(st.x-11,st.y-16,22,5)}else{ctx.fillStyle="#78716c";ctx.fillRect(st.x-22,st.y-18,44,18);ctx.fillStyle="#d6d3d1";ctx.fillRect(st.x-16,st.y-24,8,6);ctx.fillRect(st.x+8,st.y-24,8,6)}ctx.fillStyle="#111827";ctx.fillRect(st.x-16,st.y-70,34,4);ctx.fillStyle="#4ade80";ctx.fillRect(st.x-16,st.y-70,32*Math.max(0,st.hp/st.maxHp),4)}
+ for(const b of teamBots){if(!b.controlled){drawSurvivor(b);ctx.fillStyle="#dbeafe";ctx.font="bold 10px Arial";ctx.textAlign="center";ctx.fillText(b.name+" BOT",b.x+17,b.y-23);ctx.textAlign="left"}}
+ for(const r of bandits)if(r.alive){drawSurvivor({...r,name:"BANDIT",role:"RAIDER",shirt:"#991b1b"});ctx.fillStyle="#fca5a5";ctx.fillRect(r.x,r.y-10,34*Math.max(0,r.hp)/4,4)}
+ for(const b of bullets){ctx.fillStyle="#fbbf24";ctx.beginPath();ctx.ellipse(b.x+b.w/2,b.y+b.h/2,8,3,0,0,Math.PI*2);ctx.fill();ctx.fillStyle="white";ctx.fillRect(b.x+4,b.y+2,4,2)}
+ for(const p of particles){ctx.globalAlpha=Math.max(0,p.life/45);ctx.fillStyle=p.color;ctx.fillRect(p.x,p.y,p.size,p.size)}ctx.globalAlpha=1;
+ for(let i=0;i<playerCount;i++){drawHero(playerSlots[i],i>0);if(i>=2){ctx.fillStyle="#fde68a";ctx.font="bold 12px Arial";ctx.fillText("P"+(i+1),playerSlots[i].x+8,playerSlots[i].y-8)}}ctx.restore();
+ if(messageTimer>0){ctx.fillStyle="#0f172acc";ctx.fillRect(250,18,500,38);ctx.fillStyle="#fef3c7";ctx.font="bold 17px Arial";ctx.textAlign="center";ctx.fillText(supplyMessage,W/2,43);ctx.textAlign="left"}
+ if(state==="paused"||state==="dead"){ctx.fillStyle="#000b";ctx.fillRect(0,0,W,H);ctx.fillStyle="white";ctx.font="bold 48px Arial";ctx.textAlign="center";ctx.fillText(state==="dead"?"YOU DIED":"PAUSED",W/2,250);ctx.font="20px Arial";ctx.fillText("Press RESTART to play again",W/2,300);ctx.textAlign="left"}
+ ctx.restore();
+}
+function loop(){update();draw();requestAnimationFrame(loop)}
+updateHUD();loop();
+</script>
+<script src="/socket.io/socket.io.js"></script>
+
+<script>
+/* Zombie City online co-op client.
+   The server relays player positions and shots. Each browser still runs its local
+   world simulation; shared authoritative world-state is a later networking step. */
+let onlineSocket=null,onlineRoom="",onlineHost=false;
+let onlineLastSend=0,onlineRemotePlayers={};
+function onlineSetStatus(msg,color="#fbbf24"){
+ const el=document.getElementById("onlineStatus");
+ if(el){el.textContent=msg;el.style.color=color}
+}
+function onlineRenderPlayers(list){
+ const el=document.getElementById("onlinePlayers"); if(!el)return;
+ if(!list||!list.length){el.textContent="No connected players.";return}
+ el.textContent="Players: "+list.map(p=>`P${p.slot+1}${p.id===onlineSocket?.id?" (YOU)":""}`).join(" • ");
+}
+function onlineConnect(){
+ if(onlineSocket?.connected)return;
+ if(typeof io!=="function"){onlineSetStatus("Socket.IO did not load. Refresh the page after starting the server.","#f87171");return}
+ onlineSocket=io();
+ onlineSocket.on("connect",()=>{onlineSetStatus("Connected to server. Pick any lobby below!","#4ade80");onlineRefreshRooms()});
+ onlineSocket.on("lobbyList",onlineRenderRooms);
+ onlineSocket.on("connect_error",()=>onlineSetStatus("Cannot reach server. Start Node.js server or check server address.","#f87171"));
+ onlineSocket.on("roomJoined",data=>{
+  onlineActive=true;onlineRoom=data.code;onlineSlot=data.slot;onlineHost=!!data.host;
+  onlineRemotePlayers={};
+  // Player slots 2–4 take over Mia, Noah and Zara in order.
+  if(onlineSlot>0){
+   const botIndex=onlineSlot-1;
+   const bot=teamBots[botIndex];
+   const actor=playerSlots[onlineSlot];
+   if(bot&&actor){
+    Object.assign(actor,{x:bot.x,y:bot.y,health:bot.health,ammo:bot.ammo,weapon:bot.weapon,shirt:bot.shirt,name:bot.name,vx:0,vy:0,grounded:true,invincible:0,anim:0,cooldown:0,facing:bot.facing||1});
+    bot.controlled=true;bot.playerSlot=onlineSlot;
+   }
+  }
+  playerCount=Math.max(1,data.players.length);
+  twoPlayer=playerCount>1;
+  document.getElementById("modeBtn").textContent="CO-OP PLAYERS: "+playerCount;
+  document.getElementById("onlineRoomCode").value=data.code;
+  onlineSetStatus(`In room ${data.code} — you are Player ${onlineSlot+1}. Share the code!`,"#4ade80");
+  onlineRenderPlayers(data.players);
+  for(const p of data.players){if(p.slot!==onlineSlot)onlineApplyRemote(p)}
+  updateHUD();
+ });
+ onlineSocket.on("roomUpdate",data=>{onlineRefreshRooms();
+  if(!onlineActive)return;
+  playerCount=Math.max(1,data.players.length);
+  twoPlayer=playerCount>1;
+  document.getElementById("modeBtn").textContent="CO-OP PLAYERS: "+playerCount;
+  onlineRenderPlayers(data.players);
+  const live=new Set(data.players.map(p=>p.slot));
+  for(const k of Object.keys(onlineRemotePlayers))if(!live.has(Number(k)))delete onlineRemotePlayers[k];
+  for(const p of data.players)if(p.slot!==onlineSlot)onlineApplyRemote(p);
+  updateHUD();
+ });
+ onlineSocket.on("playerMoved",p=>{if(p.slot!==onlineSlot)onlineApplyRemote(p)});
+ onlineSocket.on("playerShot",p=>{
+  if(!onlineActive||p.slot===onlineSlot)return;
+  const h=playerSlots[p.slot];if(!h)return;
+  const gun=weapons[Math.max(0,Math.min(weapons.length-1,p.weapon||0))];
+  const sx=p.x+(p.facing>0?34:-12),sy=p.y+29;
+  bullets.push({x:sx,y:sy,w:14,h:7,vx:p.facing*gun.speed,vy:0,life:90,hit:false,damage:gun.damage,networkShot:true});
+  makeBurst(sx,sy,"#fbbf24",3);
+ });
+ onlineSocket.on("roomError",msg=>onlineSetStatus(msg,"#f87171"));
+ onlineSocket.on("roomLeft",()=>{onlineReset("You left the room.");onlineRefreshRooms()});
+}
+function onlineApplyRemote(p){
+ if(!p||p.slot<0||p.slot>3)return;
+ const h=playerSlots[p.slot];if(!h)return;
+ Object.assign(h,{x:p.x,y:p.y,vx:p.vx||0,vy:p.vy||0,facing:p.facing||1,health:p.health??100,ammo:p.ammo??30,weapon:p.weapon??0,anim:p.anim||0,grounded:p.grounded!==false});
+ onlineRemotePlayers[p.slot]=true;
+ if(p.slot>0){const b=teamBots[p.slot-1];if(b){b.controlled=true;b.playerSlot=p.slot}}
+}
+
+function onlineRenderRooms(rooms){
+ const el=document.getElementById("lobbyList");if(!el)return;
+ if(!Array.isArray(rooms)||!rooms.length){el.innerHTML='<div class="lobbyEmpty">No public lobbies right now. Create one and invite others!</div>';return}
+ el.innerHTML=rooms.map(r=>`<div class="lobbyCard"><div><strong>🎮 ${escapeLobbyText(r.hostName||"Survivor")}'s Lobby</strong><div class="lobbyMeta">${r.players}/${r.maxPlayers} players · ${r.code}</div></div><button ${r.players>=r.maxPlayers?'disabled':''} onclick="onlineJoinListedRoom('${r.code}')">${r.players>=r.maxPlayers?'FULL':'JOIN'}</button></div>`).join("");
+}
+function escapeLobbyText(v){return String(v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+async function onlineRefreshRooms(){
+ const el=document.getElementById("lobbyList");if(el&&!onlineSocket?.connected){el.innerHTML='<div class="lobbyEmpty">Connect to the game server to see public lobbies.</div>';return}
+ try{
+  const response=await fetch("/api/rooms",{cache:"no-store"});
+  if(!response.ok)throw new Error("server");
+  onlineRenderRooms(await response.json());
+ }catch(e){if(el)el.innerHTML='<div class="lobbyEmpty">Cannot load lobbies. Start the server or open the hosted game URL.</div>'}
+}
+function onlineJoinListedRoom(code){
+ const box=document.getElementById("onlineRoomCode");if(box)box.value=code;
+ onlineJoinRoom();
+}
+
+function playOffline(){
+ if(onlineSocket){
+  if(onlineActive)onlineSocket.emit("leaveRoom");
+  onlineSocket.disconnect();
+  onlineSocket=null;
+ }
+ onlineActive=false;onlineSlot=-1;onlineRoom="";onlineHost=false;onlineRemotePlayers={};
+ playerCount=1;twoPlayer=false;
+ for(let i=0;i<3;i++){if(teamBots[i])teamBots[i].controlled=false}
+ const codeBox=document.getElementById("onlineRoomCode");
+ if(codeBox)codeBox.value="";
+ document.getElementById("modeBtn").textContent="CO-OP PLAYERS: 1";
+ onlineSetStatus("OFFLINE MODE — playing on this computer. No server or internet needed.","#4ade80");
+ onlineRenderPlayers([]);
+ onlineRefreshRooms();
+ updateHUD();
+}
+function onlineCreateRoom(){
+ onlineConnect();
+ if(!onlineSocket)return;
+ const name=(document.getElementById("lobbyName")?.value||"Survivor").trim().slice(0,18)||"Survivor";
+ onlineSocket.emit("createRoom",{name});
+}
+function onlineJoinRoom(){
+ onlineConnect();
+ if(!onlineSocket)return;
+ const code=(document.getElementById("onlineRoomCode").value||"").trim().toUpperCase();
+ if(!code){onlineSetStatus("Enter a room code first.","#f87171");return}
+ const name=(document.getElementById("lobbyName")?.value||"Survivor").trim().slice(0,18)||"Survivor";
+ onlineSocket.emit("joinRoom",{code,name});
+}
+function onlineLeaveRoom(){
+ if(onlineSocket&&onlineActive)onlineSocket.emit("leaveRoom");
+ onlineReset("You left the room.");
+}
+function onlineReset(message){
+ onlineActive=false;onlineSlot=-1;onlineRoom="";onlineHost=false;onlineRemotePlayers={};
+ onlineSetStatus(message||"Offline.","#fbbf24");
+ onlineRenderPlayers([]);
+ playerCount=1;twoPlayer=false;
+ document.getElementById("modeBtn").textContent="CO-OP PLAYERS: 1";
+ for(let i=1;i<4;i++){const b=teamBots[i-1];if(b)b.controlled=false}
+ updateHUD();
+}
+function onlineSendState(){
+ if(!onlineActive||!onlineSocket?.connected||onlineSlot<0)return;
+ const now=performance.now();if(now-onlineLastSend<50)return;onlineLastSend=now;
+ const h=playerSlots[onlineSlot];
+ onlineSocket.emit("playerState",{x:h.x,y:h.y,vx:h.vx,vy:h.vy,facing:h.facing,health:h.health,ammo:h.ammo,weapon:h.weapon,anim:h.anim,grounded:h.grounded});
+}
+const originalOnlineShoot=shoot;
+shoot=function(who=player){
+ originalOnlineShoot(who);
+ if(onlineActive&&onlineSocket?.connected&&onlineSlot>=0&&who===playerSlots[onlineSlot]){
+  const h=who;onlineSocket.emit("playerShot",{x:h.x,y:h.y,facing:h.facing,weapon:h.weapon});
+ }
+};
+const originalOnlineUpdate=update;
+update=function(){
+ originalOnlineUpdate();
+ if(onlineActive)onlineSendState();
+};
+</script>
+
+
+<script>
+(function setupMobileControls(){
+ const panel=document.getElementById("mobileControls");
+ if(!panel)return;
+ const setHeld=(key,on,button)=>{
+  keys[key]=on;
+  if(button)button.classList.toggle("pressed",on);
+ };
+ panel.querySelectorAll("[data-hold]").forEach(button=>{
+  const key=button.dataset.hold;
+  button.addEventListener("pointerdown",e=>{e.preventDefault();button.setPointerCapture?.(e.pointerId);setHeld(key,true,button)});
+  const release=e=>{e.preventDefault();setHeld(key,false,button)};
+  button.addEventListener("pointerup",release);
+  button.addEventListener("pointercancel",release);
+  button.addEventListener("lostpointercapture",()=>setHeld(key,false,button));
+ });
+ panel.querySelectorAll("[data-action]").forEach(button=>{
+  button.addEventListener("pointerdown",e=>{
+   e.preventDefault();
+   if(state!=="playing" && button.dataset.action!=="weapon")return;
+   switch(button.dataset.action){
+    case "jump":
+     if(player.grounded){player.vy=-13;player.grounded=false;sfx("jump")}
+     break;
+    case "shoot":shoot(player);break;
+    case "pickup":collectSupply(player);break;
+    case "weapon":cycleWeapon(player);break;
+   }
+  });
+ });
+ document.addEventListener("visibilitychange",()=>{
+  if(document.hidden)panel.querySelectorAll("[data-hold]").forEach(b=>setHeld(b.dataset.hold,false,b));
+ });
+})();
+</script>
+
+</body>
+</html>
